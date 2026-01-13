@@ -268,162 +268,199 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-gray-100">
-      <header className="bg-gray-800/50 backdrop-blur-sm border-b border-gray-700/50 shadow-xl shadow-gray-900/30">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-gray-800 font-sans">
+      <header className="bg-transparent">
         <div className="max-w-[800px] mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold text-white bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold text-white bg-gradient-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
             URL Shortener
           </h1>
         </div>
       </header>
 
-      <main>
-        <div className="max-w-[800px] mx-auto py-6 sm:px-6 lg:px-8">
-          <div className="px-4 py-6 sm:px-0">
-            <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl p-6 shadow-xl">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="longUrl"
-                    className="block text-sm font-medium text-gray-300 mb-1"
+      <main className="flex items-center justify-center min-h-[calc(100vh-200px)] px-4">
+        <div className="w-full max-w-2xl">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 mb-8">
+            {/* Tabs */}
+            <div className="flex justify-center mb-8">
+              <div className="flex bg-gray-100 rounded-full p-1">
+                <button className="flex items-center gap-2 px-6 py-3 rounded-full bg-blue-600 text-white shadow-md transition-all duration-200">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    Long URL
-                  </label>
-                  <input
-                    type="url"
-                    id="longUrl"
-                    value={longUrl}
-                    onChange={(e) => setLongUrl(e.target.value)}
-                    placeholder="https://example.com/very/long/url"
-                    required
-                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="customSlug"
-                    className="block text-sm font-medium text-gray-300 mb-1"
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                    />
+                  </svg>
+                  Short Link
+                </button>
+                <button className="flex items-center gap-2 px-6 py-3 rounded-full text-gray-600 hover:text-gray-800 transition-colors duration-200">
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
-                    Custom Alias (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    id="customSlug"
-                    value={customSlug}
-                    onChange={(e) => setCustomSlug(e.target.value)}
-                    placeholder="my-custom-slug"
-                    className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400"
-                  />
-                </div>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
+                    />
+                  </svg>
+                  QR Code
+                </button>
+              </div>
+            </div>
 
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                  Shorten a long link
+                </h2>
+
+                <label
+                  htmlFor="longUrl"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Paste your long link here
+                </label>
+                <input
+                  type="url"
+                  id="longUrl"
+                  value={longUrl}
+                  onChange={(e) => setLongUrl(e.target.value)}
+                  placeholder="https://example.com/my-long-url"
+                  required
+                  className="w-full px-6 py-4 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 placeholder-gray-500 transition-all duration-200"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="customSlug"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Custom Alias (Optional)
+                </label>
+                <input
+                  type="text"
+                  id="customSlug"
+                  value={customSlug}
+                  onChange={(e) => setCustomSlug(e.target.value)}
+                  placeholder="my-custom-slug"
+                  className="w-full px-6 py-4 border border-gray-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 placeholder-gray-500 transition-all duration-200"
+                />
+              </div>
+
+              <div className="flex justify-start">
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-lg text-base font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-all duration-200 transform hover:scale-[1.02]"
+                  className="flex items-center gap-2 px-8 py-4 bg-blue-600 text-white rounded-xl font-semibold shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {loading ? "Shortening..." : "Shorten URL"}
+                  {loading ? "Processing..." : "Get your link for free →"}
                 </button>
-              </form>
+              </div>
+            </form>
 
-              {error && (
-                <div className="mt-4 p-4 bg-red-900/30 text-red-200 rounded-lg border border-red-800/50">
-                  {error}
-                </div>
-              )}
+            {error && (
+              <div className="mt-6 p-4 bg-red-50 text-red-700 rounded-xl border border-red-200">
+                {error}
+              </div>
+            )}
 
-              {shortUrl && (
-                <div className="mt-6 p-4 bg-emerald-900/20 rounded-lg border border-emerald-800/30">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-emerald-300 truncate">
-                        Shortened URL:
-                      </p>
-                      <p className="text-sm text-emerald-200 truncate">
-                        {shortUrl}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => copyToClipboard(shortUrl, -1)}
-                      className="ml-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-emerald-100 bg-emerald-700/50 hover:bg-emerald-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transition-colors duration-200"
-                    >
-                      {copiedIndex === -1 ? "Copied!" : "Copy"}
-                    </button>
+            {shortUrl && (
+              <div className="mt-6 p-6 bg-blue-50 rounded-xl border border-blue-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-blue-800 truncate">
+                      Your shortened link:
+                    </p>
+                    <p className="text-sm text-blue-700 truncate">{shortUrl}</p>
                   </div>
+                  <button
+                    onClick={() => copyToClipboard(shortUrl, -1)}
+                    className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                  >
+                    {copiedIndex === -1 ? "Copied!" : "Copy"}
+                  </button>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
 
-            {/* Recent Links Section */}
-            <div className="mt-8">
-              <h2 className="text-xl font-semibold text-white mb-4">
-                Recent Links
-              </h2>
-              {recentLinks.length > 0 ? (
-                <div className="bg-gray-800/50 backdrop-blur-sm border border-gray-700/50 rounded-xl max-h-[450px] overflow-y-auto shadow-xl">
-                  <ul className="divide-y divide-gray-700">
-                    {recentLinks.map((link, index) => (
-                      <li key={link.slug}>
-                        <div className="px-4 py-4 sm:px-6 hover:bg-gray-700/30 transition-colors duration-150">
-                          <div className="flex items-center justify-between">
-                            <div className="text-sm font-medium text-blue-400 truncate hover:text-blue-300 transition-colors duration-150">
-                              <a
-                                href={`/${link.slug}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="hover:underline"
-                              >
-                                {link.shortUrl}
-                              </a>
-                            </div>
-                            <div className="ml-2 flex-shrink-0 flex">
-                              <span className="inline-flex items-center text-xs font-medium text-gray-400 bg-gray-700/50 px-2 py-1 rounded-full">
-                                {link.clicks} clicks
-                              </span>
-                            </div>
+          {/* Recent Links Section */}
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8">
+            <h2 className="text-xl font-semibold text-gray-800 mb-6">
+              Recent Links
+            </h2>
+            {recentLinks.length > 0 ? (
+              <div className="bg-gray-50 rounded-xl max-h-[300px] overflow-y-auto">
+                <ul className="divide-y divide-gray-200">
+                  {recentLinks.map((link, index) => (
+                    <li key={link.slug}>
+                      <div className="px-6 py-4 hover:bg-gray-100 transition-colors duration-150">
+                        <div className="flex items-center justify-between">
+                          <div className="text-sm font-medium text-blue-600 truncate hover:text-blue-800 transition-colors duration-150">
+                            <a
+                              href={`/${link.slug}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline"
+                            >
+                              {link.shortUrl}
+                            </a>
                           </div>
-                          <div className="mt-2 sm:flex sm:justify-between">
-                            <div className="sm:flex">
-                              <div className="mr-6 text-sm text-gray-400 truncate">
-                                Original: {link.longUrl}
-                              </div>
-                            </div>
-                            <div className="mt-2 flex items-center text-sm text-gray-400 sm:mt-0">
-                              <div className="flex space-x-2">
-                                <button
-                                  onClick={() =>
-                                    copyToClipboard(link.shortUrl, index)
-                                  }
-                                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-lg text-blue-100 bg-blue-700/50 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
-                                >
-                                  {copiedIndex === index ? "Copied!" : "Copy"}
-                                </button>
-                                <button
-                                  onClick={() => fetchStats(link.slug)}
-                                  className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-lg text-purple-100 bg-purple-700/50 hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200"
-                                >
-                                  Stats
-                                </button>
-                              </div>
-                            </div>
+                          <div className="ml-2 flex-shrink-0 flex">
+                            <span className="inline-flex items-center text-xs font-medium text-gray-600 bg-gray-200 px-3 py-1 rounded-full">
+                              {link.clicks} clicks
+                            </span>
                           </div>
                         </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No recent links yet</p>
-                </div>
-              )}
-            </div>
+                        <div className="mt-2 flex justify-between items-center">
+                          <div className="text-sm text-gray-600 truncate max-w-xs">
+                            Original: {link.longUrl}
+                          </div>
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() =>
+                                copyToClipboard(link.shortUrl, index)
+                              }
+                              className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-blue-700 bg-blue-100 hover:bg-blue-200 transition-colors duration-200"
+                            >
+                              {copiedIndex === index ? "Copied!" : "Copy"}
+                            </button>
+                            <button
+                              onClick={() => fetchStats(link.slug)}
+                              className="inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg text-purple-700 bg-purple-100 hover:bg-purple-200 transition-colors duration-200"
+                            >
+                              Stats
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No recent links yet</p>
+              </div>
+            )}
           </div>
         </div>
       </main>
 
-      <footer className="bg-gray-800/50 backdrop-blur-sm border-t border-gray-700/50 mt-12">
-        <div className="max-w-[800px] mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <footer className="bg-transparent py-6">
+        <div className="max-w-[800px] mx-auto px-4 sm:px-6 lg:px-8">
           <p className="text-center text-sm text-gray-400">
             URL Shortener Application &copy; {new Date().getFullYear()}
           </p>
@@ -432,16 +469,16 @@ const App = () => {
 
       {/* Stats Modal */}
       {showStats && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-gray-800 border border-gray-700 rounded-xl max-w-4xl w-full max-h-[400px] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[60vh] overflow-y-auto shadow-2xl">
             <div className="p-6">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl font-bold text-white">
+              <div className="flex justify-between items-start mb-6">
+                <h3 className="text-xl font-bold text-gray-800">
                   Link Statistics
                 </h3>
                 <button
                   onClick={closeStatsModal}
-                  className="text-gray-400 hover:text-white transition-colors duration-200"
+                  className="text-gray-500 hover:text-gray-700 transition-colors duration-200"
                 >
                   ✕
                 </button>
@@ -450,20 +487,20 @@ const App = () => {
               {loadingStats ? (
                 <div className="text-center py-8">
                   <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                  <p className="mt-2 text-gray-400">Loading stats...</p>
+                  <p className="mt-2 text-gray-600">Loading stats...</p>
                 </div>
               ) : statsData ? (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-gray-700/50 p-3 rounded-lg border border-gray-600">
-                      <p className="text-sm text-gray-400">Total Clicks</p>
-                      <p className="text-2xl font-bold text-white">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="bg-blue-50 p-4 rounded-xl">
+                      <p className="text-sm text-blue-700">Total Clicks</p>
+                      <p className="text-3xl font-bold text-blue-800">
                         {statsData.clicks}
                       </p>
                     </div>
-                    <div className="bg-gray-700/50 p-3 rounded-lg border border-gray-600">
-                      <p className="text-sm text-gray-400">Created</p>
-                      <p className="text-sm text-gray-300">
+                    <div className="bg-blue-50 p-4 rounded-xl">
+                      <p className="text-sm text-blue-700">Created</p>
+                      <p className="text-sm text-blue-800">
                         {statsData.createdAt
                           ? new Date(statsData.createdAt).toLocaleString()
                           : "N/A"}
@@ -472,56 +509,56 @@ const App = () => {
                   </div>
 
                   <div>
-                    <h4 className="font-medium text-white mb-2">
+                    <h4 className="font-semibold text-gray-800 mb-4">
                       Click Details
                     </h4>
                     <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-700">
-                        <thead className="bg-gray-700/50">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
                           <tr>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                               Time
                             </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                               Device
                             </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                               OS
                             </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                               Browser
                             </th>
-                            <th className="px-3 py-2 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
                               IP
                             </th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-700">
+                        <tbody className="divide-y divide-gray-200">
                           {statsData.clickDetails &&
                           statsData.clickDetails.length > 0 ? (
                             statsData.clickDetails.map((click, idx) => (
                               <tr key={idx}>
-                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-300">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                                   {click.timestamp
                                     ? new Date(click.timestamp).toLocaleString()
                                     : "N/A"}
                                 </td>
-                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-300">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                                   {click.deviceInfo
                                     ? click.deviceInfo.deviceType
                                     : "N/A"}
                                 </td>
-                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-300">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                                   {click.deviceInfo
                                     ? click.deviceInfo.os
                                     : "N/A"}
                                 </td>
-                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-300">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                                   {click.deviceInfo
                                     ? click.deviceInfo.browser
                                     : "N/A"}
                                 </td>
-                                <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-300">
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
                                   {click.ip || "N/A"}
                                 </td>
                               </tr>
@@ -530,7 +567,7 @@ const App = () => {
                             <tr>
                               <td
                                 colSpan="5"
-                                className="px-3 py-2 text-center text-sm text-gray-400"
+                                className="px-4 py-3 text-center text-sm text-gray-500"
                               >
                                 No click data available
                               </td>
@@ -544,8 +581,8 @@ const App = () => {
                   {/* Charts Section */}
                   <div className="mt-6 space-y-6">
                     {osChartData && (
-                      <div className="bg-gray-700/50 p-4 rounded-lg border border-gray-600">
-                        <h4 className="text-lg font-medium text-white mb-3">
+                      <div className="bg-gray-50 p-4 rounded-xl">
+                        <h4 className="text-lg font-medium text-gray-800 mb-3">
                           OS Distribution
                         </h4>
                         <div className="flex justify-center">
@@ -559,8 +596,8 @@ const App = () => {
                     )}
 
                     {countryChartData && (
-                      <div className="bg-gray-700/50 p-4 rounded-lg border border-gray-600">
-                        <h4 className="text-lg font-medium text-white mb-3">
+                      <div className="bg-gray-50 p-4 rounded-xl">
+                        <h4 className="text-lg font-medium text-gray-800 mb-3">
                           Country Distribution
                         </h4>
                         <div className="flex justify-center">
@@ -575,7 +612,7 @@ const App = () => {
                   </div>
                 </div>
               ) : (
-                <p className="text-gray-400">No stats data available</p>
+                <p className="text-gray-600">No stats data available</p>
               )}
             </div>
           </div>
