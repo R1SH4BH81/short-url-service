@@ -349,6 +349,9 @@ export const renderTrafficChart = (canvasId, chartData) => {
               font: {
                 size: 12,
               },
+              callback: function (value) {
+                return Number.isInteger(value) ? value : value.toFixed(0);
+              },
             },
           },
           x: {
@@ -378,7 +381,10 @@ export const renderTrafficChart = (canvasId, chartData) => {
             padding: 12,
             callbacks: {
               label: function (context) {
-                return `Clicks: ${context.parsed.y}`;
+                const clicks = Number.isInteger(context.parsed.y)
+                  ? context.parsed.y
+                  : Math.round(context.parsed.y);
+                return `Clicks: ${clicks}`;
               },
             },
           },
