@@ -6,6 +6,7 @@ const StatsModal = ({
   loadingStats,
   closeStatsModal,
   osChartData,
+  deviceChartData,
   countryChartData,
 }) => {
   return (
@@ -49,6 +50,61 @@ const StatsModal = ({
                   </div>
                 </div>
 
+                {/* Charts Section */}
+                <div className="mt-6 space-y-6">
+                  {(osChartData || deviceChartData || countryChartData) && (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {osChartData && (
+                          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-5 rounded-xl border border-blue-100 shadow-sm">
+                            <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                              OS Distribution
+                            </h4>
+                            <div className="flex justify-center">
+                              <canvas
+                                id="osChart"
+                                width="200"
+                                height="200"
+                              ></canvas>
+                            </div>
+                          </div>
+                        )}
+
+                        {deviceChartData && (
+                          <div className="bg-gradient-to-br from-purple-50 to-pink-50 p-5 rounded-xl border border-purple-100 shadow-sm">
+                            <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                              Device Distribution
+                            </h4>
+                            <div className="flex justify-center">
+                              <canvas
+                                id="deviceChart"
+                                width="200"
+                                height="200"
+                              ></canvas>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {countryChartData && (
+                        <div className="grid grid-cols-1">
+                          <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-5 rounded-xl border border-green-100 shadow-sm">
+                            <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                              Location Distribution
+                            </h4>
+                            <div className="flex justify-center">
+                              <canvas
+                                id="countryChart"
+                                width="200"
+                                height="200"
+                              ></canvas>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <div>
                   <h4 className="font-semibold text-gray-800 mb-4">
                     Click Details
@@ -70,7 +126,7 @@ const StatsModal = ({
                             Browser
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase tracking-wider">
-                            IP
+                            Location
                           </th>
                         </tr>
                       </thead>
@@ -98,7 +154,7 @@ const StatsModal = ({
                                   : "N/A"}
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                                {click.ip || "N/A"}
+                                {click.location || "N/A"}
                               </td>
                             </tr>
                           ))
@@ -115,35 +171,6 @@ const StatsModal = ({
                       </tbody>
                     </table>
                   </div>
-                </div>
-
-                {/* Charts Section */}
-                <div className="mt-6 space-y-6">
-                  {osChartData && (
-                    <div className="bg-gray-50 p-4 rounded-xl">
-                      <h4 className="text-lg font-medium text-gray-800 mb-3">
-                        OS Distribution
-                      </h4>
-                      <div className="flex justify-center">
-                        <canvas id="osChart" width="200" height="200"></canvas>
-                      </div>
-                    </div>
-                  )}
-
-                  {countryChartData && (
-                    <div className="bg-gray-50 p-4 rounded-xl">
-                      <h4 className="text-lg font-medium text-gray-800 mb-3">
-                        Country Distribution
-                      </h4>
-                      <div className="flex justify-center">
-                        <canvas
-                          id="countryChart"
-                          width="200"
-                          height="200"
-                        ></canvas>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             ) : (

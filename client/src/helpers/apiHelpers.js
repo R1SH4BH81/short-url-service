@@ -62,16 +62,27 @@ export const fetchChartLinkStats = async (slug) => {
     const osResponse = await fetch(`/api/stats/${slug}/os`);
     const osData = await osResponse.json();
 
+    // Fetch device distribution
+    const deviceResponse = await fetch(`/api/stats/${slug}/device`);
+    const deviceData = await deviceResponse.json();
+
+    // Combine OS and device data
+    const combinedOsData = {
+      labels: osData.labels,
+      data: osData.data,
+    };
+
     // Fetch country distribution
     const countryResponse = await fetch(`/api/stats/${slug}/country`);
     const countryData = await countryResponse.json();
 
     return {
-      osChartData: osResponse.ok ? osData : null,
+      osChartData: osResponse.ok ? combinedOsData : null,
+      deviceChartData: deviceResponse.ok ? deviceData : null,
       countryChartData: countryResponse.ok ? countryData : null,
     };
   } catch (err) {
     console.error("Error fetching chart stats:", err);
-    return { osChartData: null, countryChartData: null };
+    return { osChartData: null, deviceChartData: null, countryChartData: null };
   }
 };

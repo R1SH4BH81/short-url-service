@@ -3,512 +3,672 @@ const admin = require("firebase-admin");
 require("dotenv").config();
 const cors = require("cors");
 const geoip = require("geoip-lite");
+const path = require("path");
 
-// Initialize Firebase Admin SDK
+// Firebase Setup
 const serviceAccount = require("./firebaseServiceAccount.json");
-
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  databaseURL:
-    process.env.FIRESTORE_DATABASE_URL ||
-    "https://your-project-id.firebaseio.com",
 });
-
 const db = admin.firestore();
-const app = express();
 
-// Middleware
+const app = express();
+app.set("trust proxy", true);
 app.use(express.json());
 app.use(cors());
 
-// Helper function to generate random slug
-function generateRandomSlug(length = 6) {
+// ===============================
+// 1. Serve React Build
+// ===============================
+app.use(express.static(path.join(__dirname, "../client/dist")));
+
+// ===============================
+// 2. Helper Functions
+// ===============================
+
+// Random slug
+function generateRandomSlug(len = 6) {
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
+  return Array.from(
+    { length: len },
+    () => chars[Math.floor(Math.random() * chars.length)],
+  ).join("");
 }
 
-// POST /api/shorten - Create short URL
-app.post("/api/shorten", async (req, res) => {
-  try {
-    const { longUrl, customSlug } = req.body;
-
-    // Validate input
-    if (!longUrl) {
-      return res.status(400).json({ error: "Long URL is required" });
-    }
-
-    // Validate URL format
-    try {
-      new URL(longUrl);
-    } catch (err) {
-      return res.status(400).json({ error: "Invalid URL format" });
-    }
-
-    let slug;
-    if (customSlug) {
-      // Check if custom slug already exists
-      const doc = await db.collection("urls").doc(customSlug).get();
-      if (doc.exists) {
-        return res.status(409).json({ error: "Custom slug already exists" });
-      }
-      slug = customSlug;
-    } else {
-      // Generate random slug
-      let attempts = 0;
-      do {
-        slug = generateRandomSlug();
-        const doc = await db.collection("urls").doc(slug).get();
-        if (!doc.exists) break;
-        attempts++;
-      } while (attempts < 10); // Prevent infinite loop
-
-      if (attempts >= 10) {
-        return res
-          .status(500)
-          .json({ error: "Failed to generate unique slug" });
-      }
-    }
-
-    // Create document in Firestore
-    const urlData = {
-      longUrl,
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      clicks: 0,
-      slug,
-    };
-
-    await db.collection("urls").doc(slug).set(urlData);
-
-    const shortUrl = `${
-      process.env.BASE_URL || "http://localhost:3000"
-    }/${slug}`;
-
-    res.json({
-      shortUrl,
-      slug,
-      longUrl,
-    });
-  } catch (error) {
-    console.error("Error creating short URL:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-// Helper function to detect if the request is from a bot
-function isBot(userAgent) {
-  const botPatterns = [
+// Bot detection
+function isBot(ua = "") {
+  const bots = [
+    /redditbot/i,
     /bot/i,
     /crawl/i,
     /spider/i,
     /facebookexternalhit/i,
     /twitterbot/i,
-    /redditbot/i,
-    /linkedinbot/i,
-    /slackbot/i,
-    /whatsapp/i,
-    /pinterest/i,
-    /telegrambot/i,
-    /skypeuripreview/i,
     /discordbot/i,
-    /tumblr/i,
     /bingbot/i,
+    /googlebot/i,
     /yandex/i,
-    /google/i,
-    /yahoo/i,
-    /seznambot/i,
-    /ltx71/i,
-    /mj12bot/i,
-    /ahrefsbot/i,
-    /semrushbot/i,
-    /exabot/i,
-    /ia_archiver/i,
-    /mediapartners/i,
-    /adsbot/i,
-    /apis-google/i,
-    /smtbot/i,
-    /rogerbot/i,
-    /adidxbot/i,
-    /mj12bot/i,
-    /dotbot/i,
-    /gigabot/i,
-    /ia_archiver/i,
-    /surveybot/i,
-    /voilabot/i,
-    /archive.org_bot/i,
-    /netseer/i,
-    /gssbot/i,
-    /appengine-google/i,
-    /google-structured-data-testing-tool/i,
-    /chrome-lighthouse/i,
-    /google-inspection-tool/i,
+    /pinterest/i,
   ];
-
-  return botPatterns.some((pattern) => pattern.test(userAgent));
+  return bots.some((b) => b.test(ua));
 }
 
-// GET /:slug - Redirect to long URL
-app.get("/:slug", async (req, res) => {
+// Parse Device Info (Frontend expects this)
+function parseDeviceInfoFromUA(userAgent = "") {
+  const ua = userAgent.toLowerCase();
+
+  // Device type
+  let deviceType = "Desktop";
+  if (ua.includes("mobile")) deviceType = "Mobile";
+  if (ua.includes("tablet") || ua.includes("ipad")) deviceType = "Tablet";
+
+  // OS detection
+  let os = "Unknown";
+  if (ua.includes("windows")) os = "Windows";
+  else if (ua.includes("mac os") || ua.includes("macintosh")) os = "macOS";
+  else if (ua.includes("android")) os = "Android";
+  else if (ua.includes("iphone") || ua.includes("ipad")) os = "iOS";
+  else if (ua.includes("linux")) os = "Linux";
+
+  // Browser detection
+  let browser = "Unknown";
+  if (ua.includes("edg")) browser = "Edge";
+  else if (ua.includes("chrome") && !ua.includes("edg")) browser = "Chrome";
+  else if (ua.includes("firefox")) browser = "Firefox";
+  else if (ua.includes("safari") && !ua.includes("chrome")) browser = "Safari";
+
+  return { deviceType, os, browser };
+}
+
+// ===============================
+// 3. API ROUTES
+// ===============================
+
+// POST /api/shorten
+app.post("/api/shorten", async (req, res) => {
   try {
-    const { slug } = req.params;
-    const userAgent = req.get("User-Agent") || "";
-    const ip =
-      req.ip ||
-      req.connection.remoteAddress ||
-      req.socket.remoteAddress ||
-      (req.connection.socket ? req.connection.socket.remoteAddress : null);
+    const { longUrl, customSlug } = req.body;
 
-    // Look up the slug in Firestore
-    const doc = await db.collection("urls").doc(slug).get();
+    if (!longUrl) return res.status(400).json({ error: "Long URL required" });
 
-    if (!doc.exists) {
-      return res.status(404).send(`
-        <html>
-          <head><title>URL Not Found</title></head>
-          <body>
-            <h1>Short URL Not Found</h1>
-            <p>The requested short URL does not exist.</p>
-            <a href="/">Go Home</a>
-          </body>
-        </html>
-      `);
+    try {
+      new URL(longUrl);
+    } catch {
+      return res.status(400).json({ error: "Invalid URL" });
     }
 
-    const urlData = doc.data();
+    let slug = customSlug || generateRandomSlug();
 
-    // Check if the request is from a bot
-    const botDetected = isBot(userAgent);
-
-    // Increment clicks counter and add analytics
-    await db
-      .collection("urls")
-      .doc(slug)
-      .update({
-        clicks: admin.firestore.FieldValue.increment(1),
-        lastAccessed: admin.firestore.FieldValue.serverTimestamp(),
-      });
-
-    // Lookup country from IP address
-    const geo = geoip.lookup(ip);
-    const country = geo ? geo.country : null;
-
-    // Add click analytics to a separate collection
-    const clickData = {
-      timestamp: admin.firestore.FieldValue.serverTimestamp(),
-      userAgent: userAgent,
-      ip: ip,
-      referer: req.get("Referer") || null,
-      slug: slug,
-      country: country,
-      isBot: botDetected,
-    };
-
-    // Add to click analytics collection
-    await db.collection("clicks").add(clickData);
-
-    // If bot is detected, redirect to Google; otherwise redirect to the original URL
-    if (botDetected) {
-      res.redirect(301, "https://www.google.com");
-    } else {
-      res.redirect(301, urlData.longUrl);
+    if (customSlug) {
+      const exists = await db.collection("urls").doc(slug).get();
+      if (exists.exists)
+        return res.status(409).json({ error: "Custom slug already exists" });
     }
-  } catch (error) {
-    console.error("Error during redirect:", error);
-    res.status(500).send(`
-      <html>
-        <head><title>Error</title></head>
-        <body>
-          <h1>Server Error</h1>
-          <p>An error occurred while processing your request.</p>
-          <a href="/">Go Home</a>
-        </body>
-      </html>
-    `);
-  }
-});
 
-// GET /api/recent - Get recent URLs for a user (basic implementation without user auth)
-app.get("/api/recent", async (req, res) => {
-  try {
-    const snapshot = await db
-      .collection("urls")
-      .orderBy("createdAt", "desc")
-      .limit(10)
-      .get();
-
-    const urls = [];
-    snapshot.forEach((doc) => {
-      const data = doc.data();
-      urls.push({
-        slug: doc.id,
-        longUrl: data.longUrl,
-        shortUrl: `${process.env.BASE_URL || "http://localhost:3000"}/${
-          doc.id
-        }`,
-        clicks: data.clicks || 0,
-        createdAt: data.createdAt
-          ? data.createdAt.toDate().toISOString()
-          : null,
-      });
+    await db.collection("urls").doc(slug).set({
+      slug,
+      longUrl,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      clicks: 0,
     });
 
-    res.json(urls);
-  } catch (error) {
-    console.error("Error fetching recent URLs:", error);
-    res.status(500).json({ error: "Internal server error" });
+    const shortUrl = `${
+      process.env.BASE_URL || "https://dailybugle.tech"
+    }/${slug}`;
+    res.json({ slug, longUrl, shortUrl });
+  } catch (e) {
+    console.error("Shorten error:", e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// GET /api/stats/:slug - Get stats for a specific short URL
+// GET /api/stats/:slug/os
+app.get("/api/stats/:slug/os", async (req, res) => {
+  try {
+    const slug = req.params.slug;
+
+    const clicksSnapshot = await db
+      .collection("clicks")
+      .where("slug", "==", slug)
+      .get();
+
+    // Count OS distribution
+    const osCount = {};
+    clicksSnapshot.docs.forEach((doc) => {
+      const click = doc.data();
+      if (click.deviceInfo && click.deviceInfo.os) {
+        const os = click.deviceInfo.os;
+        osCount[os] = (osCount[os] || 0) + 1;
+      }
+    });
+
+    // Sort and format data for chart
+    const sortedEntries = Object.entries(osCount).sort((a, b) => b[1] - a[1]);
+
+    // Get top 7 OS and aggregate the rest as 'Others'
+    let topEntries = sortedEntries.slice(0, 7);
+    let othersCount = 0;
+
+    if (sortedEntries.length > 7) {
+      for (let i = 7; i < sortedEntries.length; i++) {
+        othersCount += sortedEntries[i][1];
+      }
+      topEntries.push(["Others", othersCount]);
+    }
+
+    const labels = topEntries.map((entry) => entry[0]);
+    const data = topEntries.map((entry) => entry[1]);
+
+    res.json({ labels, data });
+  } catch (e) {
+    console.error("OS stats error:", e);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET /api/stats/:slug/device
+app.get("/api/stats/:slug/device", async (req, res) => {
+  try {
+    const slug = req.params.slug;
+
+    const clicksSnapshot = await db
+      .collection("clicks")
+      .where("slug", "==", slug)
+      .get();
+
+    // Count device distribution
+    const deviceCount = {};
+    clicksSnapshot.docs.forEach((doc) => {
+      const click = doc.data();
+      if (click.deviceInfo && click.deviceInfo.deviceType) {
+        const deviceType = click.deviceInfo.deviceType;
+        deviceCount[deviceType] = (deviceCount[deviceType] || 0) + 1;
+      }
+    });
+
+    // Sort and format data for chart
+    const sortedEntries = Object.entries(deviceCount).sort(
+      (a, b) => b[1] - a[1],
+    );
+
+    // Get top 7 device types and aggregate the rest as 'Others'
+    let topEntries = sortedEntries.slice(0, 7);
+    let othersCount = 0;
+
+    if (sortedEntries.length > 7) {
+      for (let i = 7; i < sortedEntries.length; i++) {
+        othersCount += sortedEntries[i][1];
+      }
+      topEntries.push(["Others", othersCount]);
+    }
+
+    const labels = topEntries.map((entry) => entry[0]);
+    const data = topEntries.map((entry) => entry[1]);
+
+    res.json({ labels, data });
+  } catch (e) {
+    console.error("Device stats error:", e);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET /api/stats/:slug/country
+app.get("/api/stats/:slug/country", async (req, res) => {
+  try {
+    const slug = req.params.slug;
+
+    const clicksSnapshot = await db
+      .collection("clicks")
+      .where("slug", "==", slug)
+      .get();
+
+    // Count location distribution - prioritize city/country combination if available
+    const locationCount = {};
+    clicksSnapshot.docs.forEach((doc) => {
+      const click = doc.data();
+      if (click.country) {
+        // Convert country code to full name using a mapping
+        const countryName = getCountryName(click.country);
+        // Use the location field which includes city/region info if available
+        const location = click.location || countryName;
+        locationCount[location] = (locationCount[location] || 0) + 1;
+      }
+    });
+
+    // Sort and format data for chart
+    const sortedEntries = Object.entries(locationCount).sort(
+      (a, b) => b[1] - a[1],
+    );
+
+    // Get top 3 locations and aggregate the rest as 'Others'
+    let topEntries = sortedEntries.slice(0, 3);
+    let othersCount = 0;
+
+    if (sortedEntries.length > 3) {
+      for (let i = 3; i < sortedEntries.length; i++) {
+        othersCount += sortedEntries[i][1];
+      }
+      topEntries.push(["Others", othersCount]);
+    }
+
+    const labels = topEntries.map((entry) => entry[0]);
+    const data = topEntries.map((entry) => entry[1]);
+
+    res.json({ labels, data });
+  } catch (e) {
+    console.error("Country stats error:", e);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Country code to name mapping
+const countryCodes = {
+  AF: "Afghanistan",
+  AX: "Åland Islands",
+  AL: "Albania",
+  DZ: "Algeria",
+  AS: "American Samoa",
+  AD: "Andorra",
+  AO: "Angola",
+  AI: "Anguilla",
+  AQ: "Antarctica",
+  AG: "Antigua and Barbuda",
+  AR: "Argentina",
+  AM: "Armenia",
+  AW: "Aruba",
+  AU: "Australia",
+  AT: "Austria",
+  AZ: "Azerbaijan",
+  BS: "Bahamas",
+  BH: "Bahrain",
+  BD: "Bangladesh",
+  BB: "Barbados",
+  BY: "Belarus",
+  BE: "Belgium",
+  BZ: "Belize",
+  BJ: "Benin",
+  BM: "Bermuda",
+  BT: "Bhutan",
+  BO: "Bolivia",
+  BQ: "Bonaire, Sint Eustatius and Saba",
+  BA: "Bosnia and Herzegovina",
+  BW: "Botswana",
+  BV: "Bouvet Island",
+  BR: "Brazil",
+  IO: "British Indian Ocean Territory",
+  BN: "Brunei Darussalam",
+  BG: "Bulgaria",
+  BF: "Burkina Faso",
+  BI: "Burundi",
+  KH: "Cambodia",
+  CM: "Cameroon",
+  CA: "Canada",
+  CV: "Cape Verde",
+  KY: "Cayman Islands",
+  CF: "Central African Republic",
+  TD: "Chad",
+  CL: "Chile",
+  CN: "China",
+  CX: "Christmas Island",
+  CC: "Cocos (Keeling) Islands",
+  CO: "Colombia",
+  KM: "Comoros",
+  CG: "Congo",
+  CD: "Congo, Democratic Republic of the Congo",
+  CK: "Cook Islands",
+  CR: "Costa Rica",
+  CI: "Côte d'Ivoire",
+  HR: "Croatia",
+  CU: "Cuba",
+  CW: "Curaçao",
+  CY: "Cyprus",
+  CZ: "Czech Republic",
+  DK: "Denmark",
+  DJ: "Djibouti",
+  DM: "Dominica",
+  DO: "Dominican Republic",
+  EC: "Ecuador",
+  EG: "Egypt",
+  SV: "El Salvador",
+  GQ: "Equatorial Guinea",
+  ER: "Eritrea",
+  EE: "Estonia",
+  ET: "Ethiopia",
+  FK: "Falkland Islands (Malvinas)",
+  FO: "Faroe Islands",
+  FJ: "Fiji",
+  FI: "Finland",
+  FR: "France",
+  GF: "French Guiana",
+  PF: "French Polynesia",
+  TF: "French Southern Territories",
+  GA: "Gabon",
+  GM: "Gambia",
+  GE: "Georgia",
+  DE: "Germany",
+  GH: "Ghana",
+  GI: "Gibraltar",
+  GR: "Greece",
+  GL: "Greenland",
+  GD: "Grenada",
+  GP: "Guadeloupe",
+  GU: "Guam",
+  GT: "Guatemala",
+  GG: "Guernsey",
+  GN: "Guinea",
+  GW: "Guinea-Bissau",
+  GY: "Guyana",
+  HT: "Haiti",
+  HM: "Heard Island and McDonald Islands",
+  VA: "Holy See (Vatican City State)",
+  HN: "Honduras",
+  HK: "Hong Kong",
+  HU: "Hungary",
+  IS: "Iceland",
+  IN: "India",
+  ID: "Indonesia",
+  IR: "Iran, Islamic Republic of Persian Gulf",
+  IQ: "Iraq",
+  IE: "Ireland",
+  IM: "Isle of Man",
+  IL: "Israel",
+  IT: "Italy",
+  JM: "Jamaica",
+  JP: "Japan",
+  JE: "Jersey",
+  JO: "Jordan",
+  KZ: "Kazakhstan",
+  KE: "Kenya",
+  KI: "Kiribati",
+  KP: "Korea, Democratic People's Republic of Korea",
+  KR: "Korea, Republic of South Korea",
+  KW: "Kuwait",
+  KG: "Kyrgyzstan",
+  LA: "Lao People's Democratic Republic",
+  LV: "Latvia",
+  LB: "Lebanon",
+  LS: "Lesotho",
+  LR: "Liberia",
+  LY: "Libya",
+  LI: "Liechtenstein",
+  LT: "Lithuania",
+  LU: "Luxembourg",
+  MO: "Macao",
+  MK: "Macedonia",
+  MG: "Madagascar",
+  MW: "Malawi",
+  MY: "Malaysia",
+  MV: "Maldives",
+  ML: "Mali",
+  MT: "Malta",
+  MH: "Marshall Islands",
+  MQ: "Martinique",
+  MR: "Mauritania",
+  MU: "Mauritius",
+  YT: "Mayotte",
+  MX: "Mexico",
+  FM: "Micronesia, Federated States of Micronesia",
+  MD: "Moldova, Republic of Moldova",
+  MC: "Monaco",
+  MN: "Mongolia",
+  ME: "Montenegro",
+  MS: "Montserrat",
+  MA: "Morocco",
+  MZ: "Mozambique",
+  MM: "Myanmar",
+  NA: "Namibia",
+  NR: "Nau",
+  NP: "Nepal",
+  NL: "Netherlands",
+  NC: "New Caledonia",
+  NZ: "New Zealand",
+  NI: "Nicaragua",
+  NE: "Niger",
+  NG: "Nigeria",
+  NU: "Niue",
+  NF: "Norfolk Island",
+  MP: "Northern Mariana Islands",
+  NO: "Norway",
+  OM: "Oman",
+  PK: "Pakistan",
+  PW: "Palau",
+  PS: "Palestinian Territory, Occupied",
+  PA: "Panama",
+  PG: "Papua New Guinea",
+  PY: "Paraguay",
+  PE: "Peru",
+  PH: "Philippines",
+  PN: "Pitcairn",
+  PL: "Poland",
+  PT: "Portugal",
+  PR: "Puerto Rico",
+  QA: "Qatar",
+  RE: "Reunion",
+  RO: "Romania",
+  RU: "Russian Federation",
+  RW: "Rwanda",
+  BL: "Saint Barthélemy",
+  SH: "Saint Helena, Ascension and Tristan da Cunha",
+  KN: "Saint Kitts and Nevis",
+  LC: "Saint Lucia",
+  MF: "Saint Martin (French part)",
+  PM: "Saint Pierre and Miquelon",
+  VC: "Saint Vincent and the Grenadines",
+  WS: "Samoa",
+  SM: "San Marino",
+  ST: "Sao Tome and Principe",
+  SA: "Saudi Arabia",
+  SN: "Senegal",
+  RS: "Serbia",
+  SC: "Seychelles",
+  SL: "Sierra Leone",
+  SG: "Singapore",
+  SX: "Sint Maarten (Dutch part)",
+  SK: "Slovakia",
+  SI: "Slovenia",
+  SB: "Solomon Islands",
+  SO: "Somalia",
+  ZA: "South Africa",
+  GS: "South Georgia and the South Sandwich Islands",
+  SS: "South Sudan",
+  ES: "Spain",
+  LK: "Sri Lanka",
+  SD: "Sudan",
+  SR: "Suriname",
+  SJ: "Svalbard and Jan Mayen",
+  SZ: "Swaziland",
+  SE: "Sweden",
+  CH: "Switzerland",
+  SY: "Syrian Arab Republic",
+  TW: "Taiwan",
+  TJ: "Tajikistan",
+  TZ: "Tanzania, United Republic of Tanzania",
+  TH: "Thailand",
+  TL: "Timor-Leste",
+  TG: "Togo",
+  TK: "Tokelau",
+  TO: "Tonga",
+  TT: "Trinidad and Tobago",
+  TN: "Tunisia",
+  TR: "Turkey",
+  TM: "Turkmenistan",
+  TC: "Turks and Caicos Islands",
+  TV: "Tuvalu",
+  UG: "Uganda",
+  UA: "Ukraine",
+  AE: "United Arab Emirates",
+  GB: "United Kingdom",
+  US: "United States",
+  UM: "United States Minor Outlying Islands",
+  UY: "Uruguay",
+  UZ: "Uzbekistan",
+  VU: "Vanuatu",
+  VE: "Venezuela, Bolivarian Republic of Venezuela",
+  VN: "Vietnam",
+  VG: "Virgin Islands, British",
+  VI: "Virgin Islands, U.S.",
+  WF: "Wallis and Futuna",
+  EH: "Western Sahara",
+  YE: "Yemen",
+  ZM: "Zambia",
+  ZW: "Zimbabwe",
+};
+
+function getCountryName(code) {
+  return countryCodes[code] || code;
+}
+
+// GET /api/recent
+app.get("/api/recent", async (req, res) => {
+  try {
+    const snap = await db
+      .collection("urls")
+      .orderBy("createdAt", "desc")
+      .limit(20)
+      .get();
+
+    const list = snap.docs.map((d) => ({
+      slug: d.id,
+      longUrl: d.data().longUrl,
+      clicks: d.data().clicks || 0,
+      shortUrl: `${process.env.BASE_URL || "https://dailybugle.tech"}/${d.id}`,
+      createdAt: d.data().createdAt
+        ? d.data().createdAt.toDate().toISOString()
+        : null,
+    }));
+
+    res.json(list);
+  } catch (e) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// GET /api/stats/:slug
 app.get("/api/stats/:slug", async (req, res) => {
   try {
-    const { slug } = req.params;
+    const slug = req.params.slug;
 
     const doc = await db.collection("urls").doc(slug).get();
-
     if (!doc.exists) {
       return res.status(404).json({ error: "URL not found" });
     }
 
     const data = doc.data();
 
-    // Get click analytics for this slug
     const clicksSnapshot = await db
       .collection("clicks")
       .where("slug", "==", slug)
       .get();
 
-    const clicks = [];
-    clicksSnapshot.forEach((clickDoc) => {
-      const clickData = clickDoc.data();
-      clicks.push({
-        id: clickDoc.id,
-        timestamp: clickData.timestamp
-          ? clickData.timestamp.toDate().toISOString()
-          : null,
-        userAgent: clickData.userAgent,
-        ip: clickData.ip,
-        referer: clickData.referer,
-        isBot: clickData.isBot || false,
-        // Parse device info from user agent
-        deviceInfo: parseDeviceInfoFromUA(clickData.userAgent),
-      });
-    });
+    const clickDetails = clicksSnapshot.docs
+      .map((d) => {
+        const c = d.data();
 
-    // Sort clicks by timestamp in descending order (most recent first) and limit to 100
-    clicks.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    const limitedClicks = clicks.slice(0, 100);
+        // Get location information from IP
+        let location = "Unknown";
+        if (c.ip) {
+          const geo = geoip.lookup(c.ip);
+          if (geo) {
+            const countryName = getCountryName(geo.country);
+            const region = geo.region || geo.city || "Unknown";
+            location = `${region}, ${countryName}`;
+          }
+        }
+
+        return {
+          id: d.id,
+          timestamp: c.timestamp ? c.timestamp.toDate().toISOString() : null,
+          ip: c.ip || null,
+          location: location, // Human-readable location
+          userAgent: c.userAgent || null,
+          referer: c.referer || null,
+          isBot: c.isBot || false,
+          deviceInfo: c.deviceInfo || {
+            deviceType: "Unknown",
+            os: "Unknown",
+            browser: "Unknown",
+          },
+        };
+      })
+      .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)); // Safe sort
 
     res.json({
       slug,
       longUrl: data.longUrl,
       clicks: data.clicks || 0,
       createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
-      lastAccessed: data.lastAccessed
-        ? data.lastAccessed.toDate().toISOString()
-        : null,
-      clickDetails: limitedClicks,
+      clickDetails,
     });
-  } catch (error) {
-    console.error("Error fetching stats:", error);
-    res.status(500).json({ error: "Internal server error" });
+  } catch (e) {
+    console.error("Stats error:", e);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
-// Helper function to parse device info from user agent
-function parseDeviceInfoFromUA(userAgent) {
-  // Device type detection
-  const isMobile = /mobile|android|iphone|ipod|ipad/i.test(userAgent);
-  const isTablet = /tablet|ipad/i.test(userAgent) && !isMobile;
+// ===============================
+// 4. Short URL Redirect (/slug)
+// ===============================
+app.get("/:slug([A-Za-z0-9-_]+)", async (req, res, next) => {
+  const slug = req.params.slug;
 
-  // OS detection
-  let os = "Unknown";
-  if (/windows nt 10/i.test(userAgent)) os = "Windows 10/11";
-  else if (/windows nt 6\.3/i.test(userAgent)) os = "Windows 8.1";
-  else if (/windows nt 6\.2/i.test(userAgent)) os = "Windows 8";
-  else if (/windows nt 6\.1/i.test(userAgent)) os = "Windows 7";
-  else if (/mac os x/i.test(userAgent)) os = "macOS";
-  else if (/android/i.test(userAgent)) os = "Android";
-  else if (/linux/i.test(userAgent)) os = "Linux";
-  else if (/iphone|ipad|ipod/i.test(userAgent)) os = "iOS";
+  const reactRoutes = ["stats", "dashboard", "analytics"];
+  if (reactRoutes.includes(slug)) return next();
 
-  // Browser detection
-  let browser = "Unknown";
-  if (/chrome|chromium|crios/i.test(userAgent)) browser = "Chrome";
-  else if (/firefox|fxios/i.test(userAgent)) browser = "Firefox";
-  else if (/safari/i.test(userAgent) && !/chrome/i.test(userAgent))
-    browser = "Safari";
-  else if (/edge/i.test(userAgent)) browser = "Edge";
-  else if (/opera|opr/i.test(userAgent)) browser = "Opera";
-
-  return {
-    deviceType: isTablet ? "Tablet" : isMobile ? "Mobile" : "Desktop",
-    os,
-    browser,
-  };
-}
-
-// GET /api/stats/:slug/os - Get OS distribution for a specific slug
-app.get("/api/stats/:slug/os", async (req, res) => {
   try {
-    const { slug } = req.params;
+    const doc = await db.collection("urls").doc(slug).get();
+    if (!doc.exists) return next();
 
-    const clicksSnapshot = await db
-      .collection("clicks")
-      .where("slug", "==", slug)
-      .get();
+    const urlData = doc.data();
 
-    const osCount = {};
+    const userAgent = req.get("User-Agent") || "";
+    const ip =
+      req.ip ||
+      req.connection.remoteAddress ||
+      req.socket.remoteAddress ||
+      null;
 
-    clicksSnapshot.forEach((clickDoc) => {
-      const clickData = clickDoc.data();
-      // Only count non-bot visits for analytics
-      if (!clickData.isBot) {
-        const deviceInfo = parseDeviceInfoFromUA(clickData.userAgent);
-        const os = deviceInfo.os;
+    const deviceInfo = parseDeviceInfoFromUA(userAgent);
+    const bot = isBot(userAgent);
+    const geo = geoip.lookup(ip);
+    const country = geo ? geo.country : null;
 
-        if (osCount[os]) {
-          osCount[os]++;
-        } else {
-          osCount[os] = 1;
-        }
-      }
-    });
+    // Save analytics
+    await Promise.all([
+      db
+        .collection("urls")
+        .doc(slug)
+        .update({
+          clicks: admin.firestore.FieldValue.increment(1),
+          lastAccessed: admin.firestore.FieldValue.serverTimestamp(),
+        }),
 
-    // Convert to chart format
-    const labels = Object.keys(osCount);
-    const data = Object.values(osCount);
+      db.collection("clicks").add({
+        timestamp: admin.firestore.FieldValue.serverTimestamp(),
+        slug,
+        ip,
+        userAgent,
+        referer: req.get("Referer") || null,
+        country,
+        isBot: bot,
+        deviceInfo, // ← REQUIRED BY FRONTEND
+      }),
+    ]);
 
-    res.json({
-      labels,
-      data,
-      total: labels.reduce((sum, _, i) => sum + data[i], 0),
-    });
-  } catch (error) {
-    console.error("Error fetching OS stats:", error);
-    res.status(500).json({ error: "Internal server error" });
+    return res.redirect(301, urlData.longUrl);
+  } catch (e) {
+    console.error("Redirect error:", e);
+    res.status(500).send("Server error");
   }
 });
 
-// GET /api/stats/:slug/country - Get country distribution for a specific slug
-app.get("/api/stats/:slug/country", async (req, res) => {
-  try {
-    const { slug } = req.params;
-
-    const clicksSnapshot = await db
-      .collection("clicks")
-      .where("slug", "==", slug)
-      .get();
-
-    const countryCount = {};
-
-    clicksSnapshot.forEach((clickDoc) => {
-      const clickData = clickDoc.data();
-      // Only count non-bot visits for analytics
-      if (!clickData.isBot) {
-        const country = clickData.country;
-
-        if (country) {
-          // Only count if country is available
-          if (countryCount[country]) {
-            countryCount[country]++;
-          } else {
-            countryCount[country] = 1;
-          }
-        }
-      }
-    });
-
-    // Convert to chart format
-    const labels = Object.keys(countryCount);
-    const data = Object.values(countryCount);
-
-    res.json({
-      labels,
-      data,
-      total: labels.reduce((sum, _, i) => sum + data[i], 0),
-    });
-  } catch (error) {
-    console.error("Error fetching country stats:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
+// ===============================
+// 5. React Fallback
+// ===============================
+app.get("*", (req, res) => {
+  res.sendFile(path.join(__dirname, "../client/dist/index.html"));
 });
 
-// Root route for health check and home page
-app.get("/", (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <title>URL Shortener</title>
-        <style>
-          body { font-family: Arial, sans-serif; margin: 40px; }
-          .container { max-width: 600px; margin: 0 auto; }
-          input, button { padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; }
-          button { background-color: #007bff; color: white; border: none; cursor: pointer; }
-          button:hover { background-color: #0056b3; }
-          .result { margin-top: 20px; padding: 10px; background-color: #f8f9fa; border-radius: 4px; }
-          .error { color: red; }
-          .success { color: green; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1>URL Shortener</h1>
-          <form id="shortenForm">
-            <input type="url" id="longUrl" placeholder="Enter long URL" required />
-            <input type="text" id="customSlug" placeholder="Custom slug (optional)" />
-            <button type="submit">Shorten URL</button>
-          </form>
-          <div id="result"></div>
-        </div>
-        
-        <script>
-          document.getElementById('shortenForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const longUrl = document.getElementById('longUrl').value;
-            const customSlug = document.getElementById('customSlug').value;
-            
-            try {
-              const response = await fetch('/api/shorten', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ longUrl, customSlug })
-              });
-              
-              const data = await response.json();
-              
-              const resultDiv = document.getElementById('result');
-              if (response.ok) {
-                resultDiv.innerHTML = '<div class="result success"><strong>Shortened URL:</strong> <a href="' + data.shortUrl + '" target="_blank">' + data.shortUrl + '</a><br><button onclick="copyToClipboard(\'' + data.shortUrl + '\')">Copy to Clipboard</button></div>';
-              } else {
-                resultDiv.innerHTML = '<div class="result error">Error: ' + data.error + '</div>';
-              }
-            } catch (error) {
-              document.getElementById('result').innerHTML = '<div class="result error">Network error: ' + error.message + '</div>';
-            }
-          });
-          
-          async function copyToClipboard(text) {
-            try {
-              await navigator.clipboard.writeText(text);
-              alert('Copied to clipboard!');
-            } catch (err) {
-              console.error('Failed to copy: ', err);
-            }
-          }
-        </script>
-      </body>
-    </html>
-  `);
-});
-
+// Start Server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

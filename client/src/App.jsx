@@ -10,6 +10,9 @@ import {
 import { copyToClipboard } from "./helpers/utils";
 import {
   renderDoughnutChart,
+  renderDeviceDistributionChart,
+  renderOSDistributionChart,
+  renderLocationDistributionChart,
   defaultChartColors,
 } from "./helpers/chartHelpers";
 import { downloadQRCode } from "./helpers/uiHelpers";
@@ -36,9 +39,11 @@ const App = () => {
   const [loadingStats, setLoadingStats] = useState(false);
   const [darkMode, setDarkMode] = useState(true); // Set to true for dark mode only
   const [osChartData, setOsChartData] = useState(null);
+  const [deviceChartData, setDeviceChartData] = useState(null);
   const [countryChartData, setCountryChartData] = useState(null);
   const [loadingCharts, setLoadingCharts] = useState({
     os: false,
+    device: false,
     country: false,
   });
   const [activeTab, setActiveTab] = useState("link"); // 'link' or 'qr'
@@ -57,13 +62,19 @@ const App = () => {
   // Render charts when chart data changes
   useEffect(() => {
     if (osChartData) {
-      renderDoughnutChart("osChart", osChartData, defaultChartColors);
+      renderOSDistributionChart("osChart", osChartData);
     }
   }, [osChartData]);
 
   useEffect(() => {
+    if (deviceChartData) {
+      renderDeviceDistributionChart("deviceChart", deviceChartData);
+    }
+  }, [deviceChartData]);
+
+  useEffect(() => {
     if (countryChartData) {
-      renderDoughnutChart("countryChart", countryChartData, defaultChartColors);
+      renderLocationDistributionChart("countryChart", countryChartData);
     }
   }, [countryChartData]);
 
@@ -100,14 +111,20 @@ const App = () => {
   };
 
   const fetchChartStats = async (slug) => {
-    setLoadingCharts((prev) => ({ ...prev, os: true, country: true }));
+    setLoadingCharts((prev) => ({
+      ...prev,
+      os: true,
+      device: true,
+      country: true,
+    }));
 
     const chartData = await fetchChartLinkStats(slug);
 
     setOsChartData(chartData.osChartData);
+    setDeviceChartData(chartData.deviceChartData);
     setCountryChartData(chartData.countryChartData);
 
-    setLoadingCharts({ os: false, country: false });
+    setLoadingCharts({ os: false, device: false, country: false });
   };
 
   const fetchStats = async (slug) => {
@@ -118,7 +135,7 @@ const App = () => {
       setStatsData(statsResult.data);
       setShowStats(true);
       // Fetch chart data after showing the modal
-      fetchChartLinkStats(slug);
+      fetchChartStats(slug);
     } else {
       setError(statsResult.error);
     }
@@ -177,6 +194,7 @@ const App = () => {
         loadingStats={loadingStats}
         closeStatsModal={closeStatsModal}
         osChartData={osChartData}
+        deviceChartData={deviceChartData}
         countryChartData={countryChartData}
       />
     </div>
