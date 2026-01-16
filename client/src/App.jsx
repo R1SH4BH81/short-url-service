@@ -13,6 +13,10 @@ import {
   renderDeviceDistributionChart,
   renderOSDistributionChart,
   renderLocationDistributionChart,
+  renderReferrerDistributionChart,
+  renderTrafficTypeChart,
+  renderBotCategoryChart,
+  renderBotNameChart,
   defaultChartColors,
 } from "./helpers/chartHelpers";
 import { downloadQRCode } from "./helpers/uiHelpers";
@@ -41,6 +45,8 @@ const App = () => {
   const [osChartData, setOsChartData] = useState(null);
   const [deviceChartData, setDeviceChartData] = useState(null);
   const [countryChartData, setCountryChartData] = useState(null);
+  const [referrerChartData, setReferrerChartData] = useState(null);
+  const [botChartData, setBotChartData] = useState(null);
   const [loadingCharts, setLoadingCharts] = useState({
     os: false,
     device: false,
@@ -78,6 +84,30 @@ const App = () => {
     }
   }, [countryChartData]);
 
+  useEffect(() => {
+    if (referrerChartData) {
+      renderReferrerDistributionChart("referrerChart", referrerChartData);
+    }
+  }, [referrerChartData]);
+
+  useEffect(() => {
+    if (botChartData && botChartData.trafficType) {
+      renderTrafficTypeChart("trafficTypeChart", botChartData.trafficType);
+    }
+  }, [botChartData?.trafficType]);
+
+  useEffect(() => {
+    if (botChartData && botChartData.botCategories) {
+      renderBotCategoryChart("botCategoryChart", botChartData.botCategories);
+    }
+  }, [botChartData?.botCategories]);
+
+  useEffect(() => {
+    if (botChartData && botChartData.botNames) {
+      renderBotNameChart("botNameChart", botChartData.botNames);
+    }
+  }, [botChartData?.botNames]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -107,7 +137,10 @@ const App = () => {
     setShowStats(false);
     setStatsData(null);
     setOsChartData(null);
+    setDeviceChartData(null);
     setCountryChartData(null);
+    setReferrerChartData(null);
+    setBotChartData(null);
   };
 
   const fetchChartStats = async (slug) => {
@@ -123,6 +156,8 @@ const App = () => {
     setOsChartData(chartData.osChartData);
     setDeviceChartData(chartData.deviceChartData);
     setCountryChartData(chartData.countryChartData);
+    setReferrerChartData(chartData.referrerChartData);
+    setBotChartData(chartData.botChartData);
 
     setLoadingCharts({ os: false, device: false, country: false });
   };
@@ -196,6 +231,9 @@ const App = () => {
         osChartData={osChartData}
         deviceChartData={deviceChartData}
         countryChartData={countryChartData}
+        referrerChartData={referrerChartData}
+        botChartData={botChartData}
+        slug={statsData?.slug}
       />
     </div>
   );

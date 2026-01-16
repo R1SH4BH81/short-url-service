@@ -1,7 +1,27 @@
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js/auto";
+import {
+  Chart as ChartJS,
+  ArcElement,
+  Tooltip,
+  Legend,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+} from "chart.js/auto";
 import ChartDataLabels from "chartjs-plugin-datalabels";
 
-ChartJS.register(ArcElement, Tooltip, Legend, ChartDataLabels);
+ChartJS.register(
+  ArcElement,
+  Tooltip,
+  Legend,
+  ChartDataLabels,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Filler,
+);
 
 // Chart Helper Functions
 export const renderDoughnutChart = (canvasId, chartData, chartColors = []) => {
@@ -281,3 +301,112 @@ export const defaultChartColors = [
   "#F87171", // red-300
   "#A78BFA", // violet-300
 ];
+
+// Traffic Over Time Chart
+export const renderTrafficChart = (canvasId, chartData) => {
+  if (!chartData) return;
+
+  // Destroy existing chart if it exists
+  const existingChart = ChartJS.getChart(canvasId);
+  if (existingChart) {
+    existingChart.destroy();
+  }
+
+  const ctx = document.getElementById(canvasId)?.getContext("2d");
+  if (ctx) {
+    new ChartJS(ctx, {
+      type: "line",
+      data: {
+        labels: chartData.labels,
+        datasets: [
+          {
+            label: "Clicks",
+            data: chartData.data,
+            borderColor: "#3B82F6",
+            backgroundColor: "rgba(59, 130, 246, 0.1)",
+            borderWidth: 2,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: "#3B82F6",
+            pointBorderColor: "#fff",
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            grid: {
+              color: "#E5E7EB",
+            },
+            ticks: {
+              color: "#6B7280",
+              font: {
+                size: 12,
+              },
+            },
+          },
+          x: {
+            grid: {
+              color: "#E5E7EB",
+            },
+            ticks: {
+              color: "#6B7280",
+              font: {
+                size: 11,
+              },
+              maxRotation: 45,
+              minRotation: 45,
+            },
+          },
+        },
+        plugins: {
+          legend: {
+            display: false,
+          },
+          tooltip: {
+            backgroundColor: "#374151",
+            titleColor: "#F9FAFB",
+            bodyColor: "#D1D5DB",
+            borderColor: "#4B5563",
+            borderWidth: 1,
+            padding: 12,
+            callbacks: {
+              label: function (context) {
+                return `Clicks: ${context.parsed.y}`;
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+};
+
+// Referrer Distribution Chart
+export const renderReferrerDistributionChart = (canvasId, chartData) => {
+  renderConsistentDoughnutChart(canvasId, chartData, ["By", "Referrer"]);
+};
+
+// Bot vs Human Traffic Chart
+export const renderTrafficTypeChart = (canvasId, chartData) => {
+  renderConsistentDoughnutChart(canvasId, chartData, [
+    "Human vs",
+    "Bot Traffic",
+  ]);
+};
+
+// Bot Category Distribution Chart
+export const renderBotCategoryChart = (canvasId, chartData) => {
+  renderConsistentDoughnutChart(canvasId, chartData, ["Bot", "Categories"]);
+};
+
+// Specific Bot Distribution Chart
+export const renderBotNameChart = (canvasId, chartData) => {
+  renderConsistentDoughnutChart(canvasId, chartData, ["Specific", "Bots"]);
+};
