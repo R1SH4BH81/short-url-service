@@ -242,17 +242,24 @@ const StatsModal = ({
                                 height="150"
                               ></canvas>
                             </div>
-                            <div className="mt-4 text-center">
-                              <div className="text-2xl font-bold text-red-600">
-                                {botChartData.totals.human}
+
+                            <div className="mt-4 flex justify-center space-x-8">
+                              <div className="text-center">
+                                <div className="text-2xl font-bold text-red-600">
+                                  {botChartData.totals.human}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Human Users
+                                </div>
                               </div>
-                              <div className="text-sm text-gray-600">
-                                Human Users
+                              <div className="text-center">
+                                <div className="text-2xl font-bold text-blue-600">
+                                  {botChartData.totals.bot}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                  Bots
+                                </div>
                               </div>
-                              <div className="text-2xl font-bold text-blue-600 mt-2">
-                                {botChartData.totals.bot}
-                              </div>
-                              <div className="text-sm text-gray-600">Bots</div>
                             </div>
                           </div>
                         </div>
